@@ -16,7 +16,12 @@ class ReRanker(CrossEncoder):
     """
 
     def __init__(self, model_name: str = "cross-encoder/ms-marco-MiniLM-L-6-v2"):
-        super().__init__(model_name_or_path=model_name)
+
+       # super().__init__(model_name_or_path=model_name)
+       # CrossEncoder class (from the sentence-transformers library) does not 
+       # accept a model_name_or_path keyword argument. Instead, it expects 
+       # the model name as a positional argument.
+        super().__init__(model_name)
         self.model_name = model_name
         self.score_field = "cross_score"
         self.activation_fn = Sigmoid()
@@ -39,7 +44,9 @@ class ReRanker(CrossEncoder):
         # build query/content list
         cross_inp = [[query, hit[hit_field]] for hit in results]
         # get scores
-        cross_scores = self.predict(cross_inp, activation_fn=activation_fn)
+        # he CrossEncoder.predict() method in the sentence-transformers library no longer 
+        # accepts the activation_fn argument. This is a recent change in the library's API.
+        cross_scores = self.predict(cross_inp)
         for i, result in enumerate(results):
             result[self.score_field] = cross_scores[i]
 
