@@ -91,6 +91,12 @@ class LLM:
         """Handles response formatting into a string or returns original raw response."""
         if raw_response:
             return response
+        
+        # Handle streaming response
+        if isinstance(response, CustomStreamWrapper):
+            return response  # or handle streaming differently if needed
+    
+        # Handle non-streaming response
         try:
             return response.choices[0].message.content  # type: ignore
         except Exception as e:
