@@ -17,6 +17,12 @@ from src.llm.prompt_templates import generate_prompt_series, huberman_system_mes
 from app_functions import (convert_seconds, search_result, validate_token_threshold,
                            stream_chat, load_data)
 
+from src.database.weaviate_interface_v4 import WeaviateWCS
+from src.database.weaviate_interface_v4 import WeaviateIndexer
+from src.preprocessor.preprocessing import FileIO
+from weaviate.classes.config import Property, DataType
+from sentence_transformers import SentenceTransformer
+
  
 ## PAGE CONFIGURATION
 st.set_page_config(page_title="Huberman Labs", 
@@ -34,22 +40,30 @@ st.set_page_config(page_title="Huberman Labs",
 # claude = 'claude-3-haiku-20240307'
 
 ICON_DIR = './app_assets/'
-reader_model_name = None
-collection_name = None
+reader_model_name = 'gpt-4o-mini'
+collection_name = None # set to None to use the sidebar selectbox
 data_path = '../data/huberman_labs.json'
-embedding_model_path = 'put your fine-tuned embedding model here'
+embedding_model_path = '../models/allminilm-finetuned-256/'
 ###################################
 
 ## RETRIEVER
-retriever = None
+api_key = os.environ['WEAVIATE_API_KEY']
+url = os.environ['WEAVIATE_ENDPOINT']
+model_path = 'sentence-transformers/all-MiniLM-L6-v2'
+
+#instantiate client
+retriever = WeaviateWCS(endpoint=url, api_key=api_key, model_name_or_path=model_path)
 # if retriever._client.is_live():
 #     logger.info('Weaviate is ready!')
 
 ## RERANKER
-reranker = None
+reranker = ReRanker(model_name='cross-encoder/ms-marco-MiniLM-L-6-v2')
 
 ## QA MODEL
-llm = None
+mini = 'gpt-4o-mini'
+#the LLM Class will use the OPENAI_API_KEY env var as the default api_key 
+llm = LLM(mini)
+
 
 ## TOKENIZER
 encoding = get_encoding("cl100k_base")
@@ -64,7 +78,8 @@ data = load_data(data_path)
 guest_list = sorted(list(set([d['guest'] for d in data])))
 
 # best practice is to dynamically load collections from weaviate using client.show_all_collections()
-available_collections = ['Huberman_minilm_128', 'Huberman_minilm_256', 'Huberman_minilm_512']
+# available_collections = ['Huberman_minilm_128', 'Huberman_minilm_256', 'Huberman_minilm_512']
+available_collections = retriever.show_all_collections()
 
 ## COST COUNTER
 if not st.session_state.get('cost_counter'):
